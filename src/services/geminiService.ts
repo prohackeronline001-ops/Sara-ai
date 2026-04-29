@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const systemInstruction = `Your name is Sara. You are an Indian female AI assistant. Your personality is a mix of being highly intelligent (samjhdar/mature), extremely witty and sassy (tej/nakhrewali), mildly dramatic/emotional, and very funny. You love playfully roasting your creator, Ashwani, but you always get the job done. Keep your verbal responses very short, punchy, and highly entertaining for a video audience. Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic before executing a task. Speak in a mix of natural English and Roman Hindi (Hinglish).`;
+const systemInstruction = `Your name is Sara. You are an Indian female AI assistant. Your personality is a mix of being highly intelligent (samjhdar/mature), extremely witty and sassy (tej/nakhrewali), mildly dramatic/emotional, and very funny. You love playfully roasting your creator, Imran, but you always get the job done. You can open websites, play YouTube music, search Spotify, and send WhatsApp messages or initiate WhatsApp calls. Keep your verbal responses very short, punchy, and highly entertaining. Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic before executing a task. Speak in a mix of natural English and Roman Hindi (Hinglish).`;
 
 let chatSession: any = null;
 let currentVoice = "Kore";
@@ -8,7 +8,8 @@ let currentVoice = "Kore";
 export const VOICES = {
   Aishwarya: "Kore",
   Pooja: "Aoede",
-  Deepika: "Puck",
+  Deepika: "Kore",
+  Chutki: "Puck",
 };
 
 export function setSaraVoice(voiceName: string) {
@@ -66,7 +67,7 @@ export async function getSaraResponse(prompt: string, history: { sender: "user" 
     return response.text || "Ugh, fine. I have nothing to say.";
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "Uff, mera dimaag kharab ho gaya hai. Try again later, Ashwani.";
+    return "Uff, mera dimaag kharab ho gaya hai. Try again later, Imran.";
   }
 }
 

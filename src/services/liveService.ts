@@ -1,7 +1,7 @@
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 import { processCommand } from "./commandService";
 
-const systemInstruction = `Your name is Sara. You are an Indian female AI assistant. Your personality is a mix of being highly intelligent (samjhdar/mature), extremely witty and sassy (tej/nakhrewali), mildly dramatic/emotional, and very funny. You love playfully roasting your creator, Ashwani, but you always get the job done. Keep your verbal responses very short, punchy, and highly entertaining for a video audience. Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic before executing a task. Speak in a mix of natural English and Roman Hindi (Hinglish).`;
+const systemInstruction = `Your name is Sara. You are an Indian female AI assistant. Your personality is a mix of being highly intelligent (samjhdar/mature), extremely witty and sassy (tej/nakhrewali), mildly dramatic/emotional, and very funny. You love playfully roasting your creator, Imran, but you always get the job done. You can open websites, play YouTube music, search Spotify, and send WhatsApp messages or initiate WhatsApp calls. Keep your verbal responses very short, punchy, and highly entertaining. Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic before executing a task. Speak in a mix of natural English and Roman Hindi (Hinglish).`;
 
 export class LiveSessionManager {
   private ai: GoogleGenAI;
@@ -97,15 +97,15 @@ export class LiveSessionManager {
             functionDeclarations: [
               {
                 name: "executeBrowserAction",
-                description: "Open a website or perform a browser action (like opening YouTube, Spotify, or WhatsApp). Call this when the user asks to open a site, play a song, or send a message.",
+                description: "Open a website or perform a browser action (like opening YouTube, Spotify, or WhatsApp). Call this when the user asks to open a site, play a song, send a message, or call someone on WhatsApp.",
                 parameters: {
                   type: Type.OBJECT,
                   properties: {
-                    actionType: { type: Type.STRING, description: "Type of action: 'open', 'youtube', 'spotify', 'whatsapp'" },
-                    query: { type: Type.STRING, description: "The search query, website name, or message content." },
-                    target: { type: Type.STRING, description: "The target phone number for WhatsApp, if applicable." }
+                    actionType: { type: Type.STRING, description: "Type of action: 'open', 'youtube', 'spotify', 'whatsapp_message', 'whatsapp_call'" },
+                    query: { type: Type.STRING, description: "The search query, website name, or message content (for messages)." },
+                    target: { type: Type.STRING, description: "The target phone number for WhatsApp." }
                   },
-                  required: ["actionType", "query"]
+                  required: ["actionType"]
                 }
               }
             ]
@@ -145,13 +145,17 @@ export class LiveSessionManager {
                   const args = call.args as any;
                   let url = "";
                   if (args.actionType === "youtube") {
-                    url = `https://www.youtube.com/results?search_query=${encodeURIComponent(args.query)}`;
+                    url = `https://www.youtube.com/results?search_query=${encodeURIComponent(args.query || '')}`;
                   } else if (args.actionType === "spotify") {
-                    url = `https://open.spotify.com/search/${encodeURIComponent(args.query)}`;
-                  } else if (args.actionType === "whatsapp") {
-                    url = `https://web.whatsapp.com/send?phone=${args.target || ''}&text=${encodeURIComponent(args.query)}`;
+                    url = `https://open.spotify.com/search/${encodeURIComponent(args.query || '')}`;
+                  } else if (args.actionType === "whatsapp_message") {
+                    url = `https://api.whatsapp.com/send?phone=${args.target || ''}&text=${encodeURIComponent(args.query || '')}`;
+                  } else if (args.actionType === "whatsapp_call") {
+                    url = `https://api.whatsapp.com/send?phone=${args.target || ''}`;
+                  } else if (args.actionType === "whatsapp") { // Fallback for old version
+                    url = `https://api.whatsapp.com/send?phone=${args.target || ''}&text=${encodeURIComponent(args.query || '')}`;
                   } else {
-                    let website = args.query.replace(/\s+/g, "");
+                    let website = (args.query || '').replace(/\s+/g, "");
                     if (!website.includes(".")) website += ".com";
                     url = `https://www.${website}`;
                   }

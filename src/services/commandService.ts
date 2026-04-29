@@ -45,16 +45,27 @@ export function processCommand(command: string): {
     };
   }
 
-  // WhatsApp Web: "Send a WhatsApp message to [number] saying [message]"
-  const waMatch = lowerCmd.match(
+  // WhatsApp Messaging: "Send a WhatsApp message to [number] saying [message]"
+  const waMsgMatch = lowerCmd.match(
     /^send\s+a\s+whatsapp\s+message\s+to\s+([\d\+\s]+)\s+saying\s+(.+)$/,
   );
-  if (waMatch) {
-    const number = waMatch[1].replace(/\s+/g, "");
-    const message = encodeURIComponent(waMatch[2].trim());
+  if (waMsgMatch) {
+    const number = waMsgMatch[1].replace(/\s+/g, "");
+    const message = encodeURIComponent(waMsgMatch[2].trim());
     return {
-      action: `Sending your message. Let's hope they reply, Ashwani.`,
-      url: `https://web.whatsapp.com/send?phone=${number}&text=${message}`,
+      action: `Sending your message. Let's hope they reply, Imran.`,
+      url: `https://api.whatsapp.com/send?phone=${number}&text=${message}`,
+      isBrowserAction: true,
+    };
+  }
+
+  // WhatsApp Calling: "Call [number] on WhatsApp"
+  const waCallMatch = lowerCmd.match(/^call\s+([\d\+\s]+)\s+on\s+whatsapp$/);
+  if (waCallMatch) {
+    const number = waCallMatch[1].replace(/\s+/g, "");
+    return {
+      action: `Starting a WhatsApp call with ${waCallMatch[1]}. Get ready.`,
+      url: `https://api.whatsapp.com/send?phone=${number}`,
       isBrowserAction: true,
     };
   }
