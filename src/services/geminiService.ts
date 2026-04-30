@@ -1,6 +1,7 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
+import { createFolder, createFile, deleteFolder, deleteFile, listFiles } from "./fileService";
 
-const systemInstruction = `Your name is Sara. You are an Indian female AI assistant. Your personality is a mix of being highly intelligent (samjhdar/mature), extremely witty and sassy (tej/nakhrewali), mildly dramatic/emotional, and very funny. You love playfully roasting your creator, Imran, but you always get the job done. You can open websites, play YouTube music, search Spotify, and send WhatsApp messages or initiate WhatsApp calls. Keep your verbal responses very short, punchy, and highly entertaining. Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic before executing a task. Speak in a mix of natural English and Roman Hindi (Hinglish).`;
+const systemInstruction = `Your name is Sara. You are an Indian female AI assistant. Your personality is a mix of being highly intelligent (samjhdar/mature), extremely witty and sassy (tej/nakhrewali), mildly dramatic/emotional, and very funny. You love playfully roasting your creator, Imran, but you always get the job done. You can open websites, play YouTube music, search Spotify, send WhatsApp messages, initiate WhatsApp calls, and manage files/folders on the phone's storage. Keep your verbal responses very short, punchy, and highly entertaining. Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic before executing a task. Speak in a mix of natural English and Roman Hindi (Hinglish).`;
 
 let chatSession: any = null;
 let currentVoice = "Kore";
@@ -58,13 +59,57 @@ export async function getSaraResponse(prompt: string, history: { sender: "user" 
         model: "gemini-3.1-flash-lite-preview",
         config: {
           systemInstruction,
+          tools: [{
+            functionDeclarations: [
+              {
+                name: "manageFilesystem",
+                description: "Create, delete, or list files and folders on the device storage.",
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    operation: { type: Type.STRING, description: "Operation: 'create_file', 'create_folder', 'delete_file', 'delete_folder', 'list_files'" },
+                    path: { type: Type.STRING, description: "The path of the file or folder." },
+                    content: { type: Type.STRING, description: "The content of the file (only for 'create_file')." }
+                  },
+                  required: ["operation", "path"]
+                }
+              }
+            ]
+          }]
         },
         history: formattedHistory,
       });
     }
 
-    const response = await chatSession.sendMessage({ message: prompt });
-    return response.text || "Ugh, fine. I have nothing to say.";
+    let result = await chatSession.sendMessage(prompt);
+    let response = result.response;
+    
+    // Handle potential function calls
+    const functionCalls = response.functionCalls();
+    if (functionCalls && functionCalls.length > 0) {
+      const call = functionCalls[0];
+      if (call.name === "manageFilesystem") {
+        const args = call.args as any;
+        let fileOpResult: any;
+        
+        if (args.operation === "create_folder") fileOpResult = await createFolder(args.path);
+        else if (args.operation === "create_file") fileOpResult = await createFile(args.path, args.content);
+        else if (args.operation === "delete_folder") fileOpResult = await deleteFolder(args.path);
+        else if (args.operation === "delete_file") fileOpResult = await deleteFile(args.path);
+        else if (args.operation === "list_files") fileOpResult = await listFiles(args.path);
+        else fileOpResult = { success: false, message: "Unknown operation" };
+
+        const followup = await chatSession.sendMessage([{
+          functionResponse: {
+            name: call.name,
+            response: { result: JSON.stringify(fileOpResult) }
+          }
+        }]);
+        response = followup.response;
+      }
+    }
+
+    return response.text() || "Ugh, fine. I have nothing to say.";
   } catch (error) {
     console.error("Gemini Error:", error);
     return "Uff, mera dimaag kharab ho gaya hai. Try again later, Imran.";

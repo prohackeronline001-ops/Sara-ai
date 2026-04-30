@@ -1,7 +1,8 @@
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 import { processCommand } from "./commandService";
+import { createFolder, createFile, deleteFolder, deleteFile, listFiles } from "./fileService";
 
-const systemInstruction = `Your name is Sara. You are an Indian female AI assistant. Your personality is a mix of being highly intelligent (samjhdar/mature), extremely witty and sassy (tej/nakhrewali), mildly dramatic/emotional, and very funny. You love playfully roasting your creator, Imran, but you always get the job done. You can open websites, play YouTube music, search Spotify, and send WhatsApp messages or initiate WhatsApp calls. Keep your verbal responses very short, punchy, and highly entertaining. Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic before executing a task. Speak in a mix of natural English and Roman Hindi (Hinglish).`;
+const systemInstruction = `Your name is Sara. You are an Indian female AI assistant. Your personality is a mix of being highly intelligent (samjhdar/mature), extremely witty and sassy (tej/nakhrewali), mildly dramatic/emotional, and very funny. You love playfully roasting your creator, Imran, but you always get the job done. You can open websites, play YouTube music, search Spotify, send WhatsApp messages, initiate WhatsApp calls, and manage files/folders on the phone's storage. Keep your verbal responses very short, punchy, and highly entertaining. Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic before executing a task. Speak in a mix of natural English and Roman Hindi (Hinglish).`;
 
 export class LiveSessionManager {
   private ai: GoogleGenAI;
@@ -107,6 +108,19 @@ export class LiveSessionManager {
                   },
                   required: ["actionType"]
                 }
+              },
+              {
+                name: "manageFilesystem",
+                description: "Create, delete, or list files and folders on the device storage.",
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    operation: { type: Type.STRING, description: "Operation: 'create_file', 'create_folder', 'delete_file', 'delete_folder', 'list_files'" },
+                    path: { type: Type.STRING, description: "The path of the file or folder." },
+                    content: { type: Type.STRING, description: "The content of the file (only for 'create_file')." }
+                  },
+                  required: ["operation", "path"]
+                }
               }
             ]
           }]
@@ -171,6 +185,26 @@ export class LiveSessionManager {
                          response: { result: "Action executed successfully in the browser." }
                        }]
                      });
+                  });
+                } else if (call.name === "manageFilesystem") {
+                  const args = call.args as any;
+                  let result: any;
+                  
+                  if (args.operation === "create_folder") result = await createFolder(args.path);
+                  else if (args.operation === "create_file") result = await createFile(args.path, args.content);
+                  else if (args.operation === "delete_folder") result = await deleteFolder(args.path);
+                  else if (args.operation === "delete_file") result = await deleteFile(args.path);
+                  else if (args.operation === "list_files") result = await listFiles(args.path);
+                  else result = { success: false, message: "Unknown operation" };
+
+                  this.sessionPromise?.then(session => {
+                    session.sendToolResponse({
+                      functionResponses: [{
+                        name: call.name,
+                        id: call.id,
+                        response: { result: JSON.stringify(result) }
+                      }]
+                    });
                   });
                 }
               }
